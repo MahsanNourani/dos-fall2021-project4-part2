@@ -57,6 +57,7 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
                 let response = sprintf "response to %s" str
                 printfn "%s" response
 
+                //REGISTER
                 if str.Contains("register") then
                     printfn "this is the request: %s" str
                     let usernameIdx = str.IndexOf("/") + 1
@@ -66,6 +67,12 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
                         printfn "TODO: send response to user that this username is already taken!"
                     else
                         userSocketMap <- userSocketMap.Add(username, (webSocket, true))
+                
+                //LOGIN
+                // elif str.Contains("login") then
+                    //TODO: They don't have it for login. Make sure that login is handled in client/server file, AND there is
+                    //   no need to have it here
+
                 // the response needs to be converted to a ByteSegment
                 let byteResponse =
                     response
@@ -116,14 +123,36 @@ let register =
 
         NO_CONTENT) // So that we don't need the OK (DO_SOMETHING_HERE). With OK(..), the content would cover the whole screen instead of inside the page.
 
+let login =
+    request (fun req ->
+        let username =
+            match req.queryParam "uname" with
+            | Choice1Of2 uname -> uname
+            | _ -> "argument uname was not found!!"
+
+        let password =
+            match req.queryParam "pass" with
+            | Choice1Of2 pass -> pass
+            | _ -> "argument pass was not found!!"
+
+        //Checks whether the username exists or not
+        if userSocketMap.ContainsKey(username) then
+            // TODO: call the worker dude (once we have it) to login this user
+            // For example: selectWorker <? Login(username, pwd) |> ignore
+            printfn "Success! You are logged in!"
+        else
+            printfn "User is not registered!!"
+
+        NO_CONTENT) // So that we don't need the OK (DO_SOMETHING_HERE). With OK(..), the content would cover the whole screen instead of inside the page.
+
+
 let app =
 
     choose [ pathScan "/websocket/%s" (fun uID -> path ("/websocket/" + uID) >=> handShake ws) // handles the handShake for this specific websocket
              GET
              >=> choose [ path "/" >=> file "index.html"
                           path "/register" >=> register
-                          path "/login"
-                          >=> OK "TODO: this should call loing function!" ] // Shae
+                          path "/login" >=> login ]
              POST >=> choose [ path "/" >=> NO_CONTENT ]
              NOT_FOUND "Found no handlers." ]
 

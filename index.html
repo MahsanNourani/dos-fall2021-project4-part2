@@ -193,8 +193,8 @@
     let headerDiv = $('<h3>Login Form</h3>');
     let formDiv = $('<form id="loginForm" action="/login" method="GET"></form>')
     let formGrpDiv = $('<div class="form-group"></div>');
-    formGrpDiv.append('<label for="usernameLogin">Username</label>' + '<input type="text" class="form-control authWidth" name="usernameLogin" id="usernameLogin" placeholder="Enter username" required></input>'
-     + '<label for="pwdLogin">password</label>' + '<input type="password" class="form-control authWidth" name="pwdLogin" id="pwdLogin" placeholder="Enter password" required></input>')
+    formGrpDiv.append('<label for="uname">Username</label>' + '<input type="text" class="form-control authWidth" name="uname" id="uname" placeholder="Enter username" required></input>'
+     + '<label for="pass">password</label>' + '<input type="password" class="form-control authWidth" name="pass" id="pass" placeholder="Enter password" required></input>')
     formDiv.append(formGrpDiv);
     formDiv.append($('<button type="submit" class="btn btn-primary">Login</button>'));
     mainDiv.append(headerDiv);
@@ -214,7 +214,7 @@
     document.getElementById("reTweetDiv").style.visibility = "hidden";
     document.getElementById("newsFeedOuter").style.visibility = "hidden";
     $('#loginDiv').append(getFromDiv())
-    document.getElementById("usernameLogin").value = username;
+    document.getElementById("uname").value = username;
 
   }
 
@@ -280,10 +280,10 @@
       <!--Login form begins-->
       <form id="loginForm" action="/login" method="GET">
         <div class="form-group">
-          <label for="usernameLogin">Username</label>
-          <input type="text" class="form-control authWidth" name="usernameLogin" id="usernameLogin" placeholder="Enter username" required>
-          <label for="pwdLogin">password</label>
-          <input type="password" class="form-control authWidth" name="pwdLogin" id="pwdLogin" placeholder="Enter password" required>
+          <label for="uname">Username</label>
+          <input type="text" class="form-control authWidth" name="uname" id="uname" placeholder="Enter username" required>
+          <label for="pass">password</label>
+          <input type="password" class="form-control authWidth" name="pass" id="pass" placeholder="Enter password" required>
         </div>
         <button type="submit" class="btn btn-primary">Login</button>
       </form>

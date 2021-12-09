@@ -72,6 +72,7 @@
   {
     writeToScreen("CONNECTED");
     doSend("register/" + username);
+    console.log("Test test test!!")
   }
 
   function onClose(evt)
@@ -177,7 +178,7 @@
   }
 
   function regAction() {
-    username = document.getElementById('username').value;
+    username = document.getElementById('uname').value;
     init();
   }
 
@@ -264,10 +265,10 @@
       <!--Registration form begins-->
       <form id="regForm" action="/register" onSubmit="regAction()" method="GET">
         <div class="form-group">
-          <label for="username">Username</label>
-          <input type="text" class="form-control authWidth" name="username" id="username" placeholder="Enter username" required>
-          <label for="pwd">password</label>
-          <input type="password" class="form-control authWidth" name="pwd" id="pwd" placeholder="Enter password" required>
+          <label for="uname">Username</label>
+          <input type="text" class="form-control authWidth" name="uname" id="uname" placeholder="Enter username" required>
+          <label for="pass">password</label>
+          <input type="password" class="form-control authWidth" name="pass" id="pass" placeholder="Enter password" required>
         </div>
         <button type="submit" class="btn btn-primary">Register</button>
       </form>

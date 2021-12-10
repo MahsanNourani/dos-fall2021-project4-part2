@@ -25,6 +25,8 @@ let birdAppEngine = spawn system "boss" (EngineActor 100) // TODO: need to get r
 // Here, True means it was just added.
 let mutable userSocketMap: Map<string, (WebSocket * bool)> = Map.empty
 
+//TODO: make sure the path and the name is correct, wherever it is spawned
+
 // For the below code (WS implementation of webSocket is), we started by using this template from Suave.io
 // https://github.com/SuaveIO/suave/blob/master/examples/WebSocket/Program.fs --> Here is the link for the complete working example
 // https://suave.io/websockets.html --> Here is the link for the example description
@@ -92,6 +94,42 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
             | _ -> ()
     }
 
+
+
+let handlerActor = select @"akka://BirdApp/user/handlerapi" system  
+
+//////////////////////////////////// Handler API Actor ////////////////////////////////////
+// Add Handler Actor here
+
+// This is the actor that serves some of the functionalitlies that we had in the Simulator in Project 4.1
+// The HandlerAPI works as a bridge between the sockets and clients (or sometimes, the engine).
+
+let HandlerAPI (mailbox:Actor<_>) =
+    
+    let rec loop() = actor {
+        let! message = mailbox.Receive()
+        // printfn "SPAWNING Handler API ACTOR in the loop"
+        match message with
+        | RegisterAPI (username, pass) ->
+            // Client knows its username through cid, so we only pass the password (aka pass)
+            findClientActor(username) <! Register pass
+        
+        | LoginAPI (username, pass) ->
+            // Client knows its username through cid, so we only pass the password (aka pass)
+            printfn $"******: {username}"
+            printfn $"******: {findClientActor(username)}"
+            findClientActor(username) <! Login pass
+
+
+        | _ -> printfn "Message not recognized!"
+
+        return! loop()
+
+        }
+        
+    loop()
+////////////////////////////////////End Handler API Actor ////////////////////////////////////
+
 let register =
     request (fun req ->
         let username =
@@ -115,8 +153,17 @@ let register =
             printfn $"{userSocketMap.TryFind(username).Value}"
             printfn "Success! We can now add this person!"
 
-        // TODO: create a client actor based on this info - cid = username, need to add websocket to the client
-        // TODO: call the worker dude (once we have it) to register this new client
+            // creates client actor for the new user that's registered
+            let testClient = spawn system ("client" + username) (ClientActor username userWs) |> ignore 
+            printfn $"--**--> {testClient}"
+            let newClient = findClientActor(username)
+            printfn $"--**--> {newClient}"
+            printfn $"{handlerActor}"
+            Thread.Sleep(1000)
+            // tells Socket to tell the client to register to the engine
+            handlerActor <! RegisterAPI (username, password)
+
+            printfn "After the fact!"
         else
             printfn "user is already registered!!"
 
@@ -137,8 +184,7 @@ let login =
 
         //Checks whether the username exists or not
         if userSocketMap.ContainsKey(username) then
-            // TODO: call the worker dude (once we have it) to login this user
-            // For example: selectWorker <? Login(username, pwd) |> ignore
+            handlerActor <? LoginAPI (username, password) |> ignore
             printfn "Success! You are logged in!"
         else
             printfn "User is not registered!!"
@@ -158,5 +204,8 @@ let app =
 
 [<EntryPoint>]
 let main argv =
+    // startWebServer defaultConfig app
+    spawn system "handlerapi" HandlerAPI |> ignore // creates a single instance of the handler API to handle all the messages that are transferred between client and sockets.
+    // startWebServer { defaultConfig with logger = Targets.create Verbose [||] } app
     startWebServer defaultConfig app
     0

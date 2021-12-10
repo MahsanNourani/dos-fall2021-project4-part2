@@ -6,6 +6,10 @@ open System.Text.RegularExpressions
 open Akka.Actor
 open Akka.FSharp
 
+open Suave.WebSocket
+open Suave.Sockets
+open Suave.Sockets.Control
+
 let system = ActorSystem.Create("BirdApp")
 
 //////////////////////////////////// Variables ////////////////////////////////////
@@ -56,14 +60,18 @@ type ActorMessage =
     | UpdateNewsFeed of string
     | Ack of string * string
     | Error of string
+    //Handler API Messages:
+    | RegisterAPI of string * string
+    | LoginAPI of string * string
+    
     // Simulation Messages:
-    | StartSimulation
-    | SimulateSubscribers
-    | SimulateCooing
-    | SimulateReCooing
-    | AckReCoo of int
-    | ActionDone of string
-    | FinishTimer of string
+    // | StartSimulation
+    // | SimulateSubscribers
+    // | SimulateCooing
+    // | SimulateReCooing
+    // | AckReCoo of int
+    // | ActionDone of string
+    // | FinishTimer of string
 ////////////////////////////////////End Actor Messages ////////////////////////////////////
 
 
@@ -104,7 +112,19 @@ let findClientActor (username: string) =
 
     select path system
 
+//TODO: if got time, change
+let convertByte (text: string) =
+     text |> System.Text.Encoding.ASCII.GetBytes |>ByteSegment
 
+let sendResponse (webSocket : WebSocket) (message: string) =
+    let msg = convertByte message
+    //printfn "Printing msg %A" msg
+
+    let s = socket {
+            let! res = webSocket.send Text msg true 
+            return res;
+            }
+    Async.StartAsTask s |> ignore
 ////////////////////////////////////End Functions ////////////////////////////////////
 
 

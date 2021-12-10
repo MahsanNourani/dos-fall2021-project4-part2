@@ -5,6 +5,7 @@ open Akka.Actor
 open MathNet.Numerics.Distributions
 open System.Collections.Generic
 open Akka.FSharp
+open Suave.WebSocket
 open Engine
 
 //////////////////////////////////// Variables ////////////////////////////////////
@@ -22,7 +23,7 @@ let engineActor =
 
 //////////////////////////////////// Client Actor ////////////////////////////////////
 // Add Client Actor here
-let ClientActor cid (mailbox: Actor<_>) =
+let ClientActor (cid: string) (cSocket: WebSocket) (mailbox: Actor<_>) =
     let newsFeed = new List<string>()
 
     let rec loop () =

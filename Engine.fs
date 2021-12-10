@@ -66,6 +66,7 @@ type ActorMessage =
     | RegisterAPI of string * string
     | LoginAPI of string * string
     | AckLogin of string * List<string>
+    | AckSubscribe of string * string
     | ActionDone of string * string
     
     // Simulation Messages:
@@ -278,6 +279,7 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                 elif (not (listOfOnlineUsers.Contains(username))) then
                     printfn "Whoops! Username <%s> is not logged in!!" username
                 else
+                    listOfOnlineUsers <- listOfOnlineUsers.Remove(username)
                     findClientActor (username)
                     <! Ack($"Yay! {username} is now logged out!!", "Logout")
 
@@ -295,7 +297,7 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                         ListOfSubscribersToUser <- ListOfSubscribersToUser.Add(subscribee, temp)
 
                         findClientActor (subscriber)
-                        <! Ack($"{subscriber} now follow {subscribee}.", "Subscribe")
+                        <! Ack($"{subscriber} now follows @{subscribee}.", "Subscribe")
 
                         findClientActor (subscribee)
                         <! Ack($"{subscriber} now follow {subscribee}.", "")

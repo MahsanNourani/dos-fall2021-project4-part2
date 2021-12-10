@@ -75,6 +75,35 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
                     //TODO: They don't have it for login. Make sure that login is handled in client/server file, AND there is
                     //   no need to have it here
 
+                //LOGOUT
+                elif str.Contains("logout") then
+                    printfn "this is the request: %s" str
+                    //Retrieving user name
+                    let startIndex = str.IndexOf("/") + 1
+                    let endIndex = str.LastIndexOf("/")
+                    let username = str.[startIndex .. endIndex-1]
+                    printfn $"Debug: retrieved username in logout is: {username}"
+                    printfn "list of online users before update: %A" listOfOnlineUsers
+                    
+                    //TODO: Make sure there is no need to update/empty the newsfeed list
+                    findClientActor(username) <! Logout
+
+                elif str.Contains("follow") then   //TODO: Later, change follow to "subscribe" in order to be consistent everywhere
+                    // (follow/mahsan/shae)
+                    printfn "Follow QUERY: %s" str
+                    let subscribeeIndex = str.IndexOf("/") + 1
+                    let subscriberIndex = str.LastIndexOf("/")
+                    
+                    let subscribee = str.[subscribeeIndex..subscriberIndex-1] // Username of the person to follow
+                    let subscriber = str.[subscriberIndex+1..] // Username of the person who wishes to follow the other person
+
+                    if (userSocketMap.ContainsKey(subscribee)) then
+                        // ToDO: follow the user :P
+                        findClientActor(subscriber) <! SubscribeTo(subscribee)
+                    else
+                        let message = "No matched user with handle @" + subscribee + "found to follow!!"
+                        sendResponse webSocket message
+
                 // the response needs to be converted to a ByteSegment
                 let byteResponse =
                     response
@@ -131,6 +160,10 @@ let HandlerAPI (mailbox:Actor<_>) =
                 //printfn "in else part of the log in ack"
                 sendResponse userws successMessage
 
+        | AckSubscribe (username, subscribee) -> 
+            let userws = fst(userSocketMap.TryFind(username).Value)
+            let successMessage = "You now follow @" + subscribee + "!"
+            sendResponse userws successMessage
 
         //TODO: If possible, merge all ACKs into one message
         | ActionDone (actionType, username) ->
@@ -143,7 +176,13 @@ let HandlerAPI (mailbox:Actor<_>) =
                 sendResponse userws successMessage   //reslut -> after successful registeration, the registeration form goes away, and only log in form will stay.
                 //TODO: so far assumption is that the ack message is always successful.
                 //   Make sure that the unsuccessful message is not necessary.
-
+                
+            | "Logout" ->
+                printfn "list of online users after update: %A" listOfOnlineUsers
+                let successMessage = "Logout successful for user: " + username
+                printfn "%s" successMessage
+                sendResponse userws successMessage
+                //TODO: Change here if anything is needed to be updated in index.html
 
             | _ -> printfn "Action type <%s> not recognized!" actionType
 
@@ -168,7 +207,7 @@ let register =
             | Choice1Of2 pass -> pass
             | _ -> "argument pass was not found!!"
 
-        Thread.Sleep(1000) // This delay makes sure the handshake is done before moving on. Without this, userWS below would have an error (unassigned object)
+        Thread.Sleep(500) // This delay makes sure the handshake is done before moving on. Without this, userWS below would have an error (unassigned object)
 
         let userWsTuple = userSocketMap.TryFind(username).Value
 
@@ -185,7 +224,7 @@ let register =
             let newClient = findClientActor(username)
             printfn $"--**--> {newClient}"
             printfn $"{handlerActor}"
-            Thread.Sleep(1000)
+            // Thread.Sleep(1000)
             // tells Socket to tell the client to register to the engine
             handlerActor <! RegisterAPI (username, password)
 

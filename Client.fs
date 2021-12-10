@@ -70,6 +70,10 @@ let ClientActor (cid: string) (cSocket: WebSocket) (mailbox: Actor<_>) =
                 if (actionType <> "") then
                     if (actionType = "Login") then
                         handlerActor <! AckLogin(cid, newsFeed)
+                    elif (actionType = "Subscribe") then
+                        let subscribeeIndex = ackMessage.IndexOf('@') + 1
+                        let subscribee = ackMessage.[subscribeeIndex..String.length(ackMessage) - 2]
+                        handlerActor <! AckSubscribe(cid, subscribee)
                     else
                         handlerActor <! ActionDone(actionType, cid)
 

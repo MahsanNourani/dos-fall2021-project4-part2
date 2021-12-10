@@ -12,6 +12,8 @@ open Suave.Sockets.Control
 
 let system = ActorSystem.Create("BirdApp")
 
+let handlerActor = select @"akka://BirdApp/user/handlerapi" system
+
 //////////////////////////////////// Variables ////////////////////////////////////
 // Add Variables here
 let mutable usernames: Set<string> = Set.empty // List of all the usernames in the system
@@ -63,6 +65,7 @@ type ActorMessage =
     //Handler API Messages:
     | RegisterAPI of string * string
     | LoginAPI of string * string
+    | ActionDone of string * string
     
     // Simulation Messages:
     // | StartSimulation

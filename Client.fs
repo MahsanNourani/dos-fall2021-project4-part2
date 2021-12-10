@@ -64,10 +64,11 @@ let ClientActor (cid: string) (cSocket: WebSocket) (mailbox: Actor<_>) =
                 // printfn "updated news feed was: %A" newsFeed
                 newsFeed.Insert(0, cooContent) // Adds the new coo to the top of the news feed
             // printfn "updated news feed is: %A" newsFeed
-            | Ack (ackMessage, actionType) -> printfn "Client Msg: <%s>" ackMessage
+            | Ack (ackMessage, actionType) -> 
+                printfn "Client Msg: <%s>" ackMessage
             // TODO: Fix acks from simulator or printfn to show on screen?? Console should be fine :)
-            // if (actionType <> "") then
-            //     simActor <! ActionDone(actionType)
+                if (actionType <> "") then
+                    handlerActor <! ActionDone(actionType, cid)
 
             | Error (errorMessage) -> printfn "Error Msg: <%s>" errorMessage
 

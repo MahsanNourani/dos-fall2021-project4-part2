@@ -95,8 +95,8 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
     }
 
 
-
-let handlerActor = select @"akka://BirdApp/user/handlerapi" system  
+//Moved it to Engine
+//let handlerActor = select @"akka://BirdApp/user/handlerapi" system  
 
 //////////////////////////////////// Handler API Actor ////////////////////////////////////
 // Add Handler Actor here
@@ -120,6 +120,19 @@ let HandlerAPI (mailbox:Actor<_>) =
             printfn $"******: {findClientActor(username)}"
             findClientActor(username) <! Login pass
 
+
+        //TODO: If possible, merge all ACKs into one message
+        | ActionDone (actionType, username) ->
+            match actionType with
+            | "Register" -> 
+                let userws = fst(userSocketMap.TryFind(username).Value)
+                //TODO: Question: Do I need to make ws true here? or has it been done somewhereelse? 
+                let successMessage = "Registration successful for user: " + username
+                sendResponse userws successMessage   //reslut -> after successful registeration, the registeration form goes away, and only log in form will stay.
+                //TODO: so far assumption is that the ack message is always successful.
+                //   Make sure that the unsuccessful message is not necessary.
+
+            | _ -> printfn "Action type <%s> not recognized!" actionType
 
         | _ -> printfn "Message not recognized!"
 

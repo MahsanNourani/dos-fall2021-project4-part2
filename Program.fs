@@ -120,17 +120,30 @@ let HandlerAPI (mailbox:Actor<_>) =
             printfn $"******: {findClientActor(username)}"
             findClientActor(username) <! Login pass
 
+        | AckLogin (username, newsfeed) ->
+            let userws = fst(userSocketMap.TryFind(username).Value)
+            let successMessage = "Login successful for user: " + username
+            //Newsfeed update
+            if (newsfeed.Count > 0) then   //TODO: need to be tested later, when the newsfeed is filled with coo's.
+                let newsfeedMsg = newsfeed |> String.concat "|"
+                sendResponse (userws) (successMessage + "/" + newsfeedMsg)    //TODO: Later change the format based on the updated index.html
+            else
+                //printfn "in else part of the log in ack"
+                sendResponse userws successMessage
+
 
         //TODO: If possible, merge all ACKs into one message
         | ActionDone (actionType, username) ->
+            let userws = fst(userSocketMap.TryFind(username).Value)
+            
             match actionType with
             | "Register" -> 
-                let userws = fst(userSocketMap.TryFind(username).Value)
                 //TODO: Question: Do I need to make ws true here? or has it been done somewhereelse? 
                 let successMessage = "Registration successful for user: " + username
                 sendResponse userws successMessage   //reslut -> after successful registeration, the registeration form goes away, and only log in form will stay.
                 //TODO: so far assumption is that the ack message is always successful.
                 //   Make sure that the unsuccessful message is not necessary.
+
 
             | _ -> printfn "Action type <%s> not recognized!" actionType
 

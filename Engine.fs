@@ -65,6 +65,7 @@ type ActorMessage =
     //Handler API Messages:
     | RegisterAPI of string * string
     | LoginAPI of string * string
+    | AckLogin of string * List<string>
     | ActionDone of string * string
     
     // Simulation Messages:

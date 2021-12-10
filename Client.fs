@@ -68,7 +68,10 @@ let ClientActor (cid: string) (cSocket: WebSocket) (mailbox: Actor<_>) =
                 printfn "Client Msg: <%s>" ackMessage
             // TODO: Fix acks from simulator or printfn to show on screen?? Console should be fine :)
                 if (actionType <> "") then
-                    handlerActor <! ActionDone(actionType, cid)
+                    if (actionType = "Login") then
+                        handlerActor <! AckLogin(cid, newsFeed)
+                    else
+                        handlerActor <! ActionDone(actionType, cid)
 
             | Error (errorMessage) -> printfn "Error Msg: <%s>" errorMessage
 

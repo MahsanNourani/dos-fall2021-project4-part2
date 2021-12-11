@@ -147,7 +147,7 @@
       websocket.send("tweet/" + username + "/" + message);
     } 
     if(type == "follow") websocket.send("follow/"+ message + "/" + username);
-    if(type == "retweet") websocket.send("retweet/" + username + "/" + message);
+    if(type == "retweet") websocket.send("recoo/" + username + "/" + message); //SHAE: changed retweet to recoo
     if(type == "query") websocket.send("query/" + username + "/" + message);
     if(message == "logout") websocket.send("logout/" + username + "/" + message);
     else websocket.send(message);

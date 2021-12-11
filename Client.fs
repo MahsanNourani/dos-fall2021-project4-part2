@@ -48,7 +48,7 @@ let ClientActor (cid: string) (cSocket: WebSocket) (mailbox: Actor<_>) =
                     let rndVal = Random()
                     let zipfDist = Zipf(0.9, newsFeed.Count) //80%-20% distribution    //totUsers - 1, since every user can follow all the other users, except themselves.
                     // let numOfReCoos = zipfDist.Sample()
-                    let numOfReCoos = 2
+                    let numOfReCoos = 1
                     // printfn "num of retweets for <%s> is <%d>" cid numOfReCoos
 
                     for i in [ 0 .. numOfReCoos - 1 ] do

@@ -88,6 +88,7 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
                     //TODO: Make sure there is no need to update/empty the newsfeed list
                     findClientActor(username) <! Logout
 
+                //FOLLOW
                 elif str.Contains("follow") then   //TODO: Later, change follow to "subscribe" in order to be consistent everywhere
                     // (follow/mahsan/shae)
                     printfn "Follow QUERY: %s" str
@@ -103,6 +104,17 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
                     else
                         let message = "No matched user with handle @" + subscribee + "found to follow!!"
                         sendResponse webSocket message
+
+                //RECOO
+                elif str.Contains("recoo") then  //TODO: Change "retweet" to recoo in index.html
+                    printfn "this is the request: %s" str
+                    //Retrieving user name and coo ID
+                    let startIndex = str.IndexOf("/") + 1
+                    let endIndex = str.LastIndexOf("/")
+                    let username = str.[startIndex .. endIndex-1]
+                    //let cooID = str.[endIndex..]  TODO: use cooID if we decided NOT to randomly retweet, and tweet based on the ID
+                    findClientActor(username) <! ReCoo   //Randomly select a coo from the newsfeed and post it
+
 
                 // the response needs to be converted to a ByteSegment
                 let byteResponse =

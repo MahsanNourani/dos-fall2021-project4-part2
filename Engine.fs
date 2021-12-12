@@ -67,6 +67,7 @@ type ActorMessage =
     | LoginAPI of string * string
     | AckLogin of string * List<string>
     | AckSubscribe of string * string
+    | AckQuery of string * string * Set<string>
     | ActionDone of string * string
     
     // Simulation Messages:
@@ -309,6 +310,10 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                         "Either the subscriber <%s> or the subscribee <%s> are not registered users!!"
                         subscriber
                         subscribee
+                printfn "DEBUG: List of subscribers to user: %A" ListOfSubscribersToUser
+                //TODO: fix the bug in subscribe function
+
+
             | PostCoo (cooerUsername, cooContent, isRecoo) -> //Done!
                 postACoo (cooerUsername, cooContent, isRecoo) // Adds the coo to the server
                 checkCooForMentions (cooContent) // searches the coo for mentioned users to update the list
@@ -317,12 +322,13 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
 
                 findClientActor (cooerUsername)
                 <! UpdateNewsFeed(cooContent) // This will show the Coo on the cooers' time line after it is posted to all the other users
-            | QueryMentionedCoosFor (querier, username) ->
+            | QueryMentionedCoosFor (querier, username) ->   //TODO: the assumption is that the user exists, otherwise it will give an error
                 let temp =
                     userMentionedCoos.TryFind(username).Value
 
                 if temp.IsEmpty then
                     printfn "User <%s> is not mentioned in any coo-s." username
+                    //TODO: probably would need to send this error to handler [Discuss w/ Mahsan]
                 else
                     // printfn "list of all tweets: %A" listOfCoos
                     // printfn "temp is %A" temp
@@ -350,11 +356,15 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                 else
                     findClientActor (querier)
                     <! Error($"Hashtag {hashtag} does not exist yet!")
+                    //TODO: probably would need to send this error to handler [Discuss w/ Mahsan]
 
             | QuerySubscribersCoos (querier, subscriber) ->
                 //Assumption: querier always exists.
                 let subList =
                     ListOfSubscribersToUser.TryFind(querier).Value
+
+                printfn "Debug: querier is %s and subscriber is %s" querier subscriber
+                printfn "Debug: sublist is: %A" subList
 
                 if (usernames.Contains(subscriber)
                     && subList.Contains(subscriber)) then
@@ -369,6 +379,7 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                 else
                     findClientActor (querier)
                     <! Error($"{querier} is not subscribed to {subscriber}")
+                    //TODO: probably would need to send this error to handler [Discuss w/ Mahsan]
 
             // findClientActor (querier)
             // <! SearchResults(subscriber, Set.empty) // just to unblock the process on the otherside :D

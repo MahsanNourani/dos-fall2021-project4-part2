@@ -98,6 +98,7 @@ let ClientActor (cid: string) (cSocket: WebSocket) (mailbox: Actor<_>) =
                 else
                     engine <! QuerySubscribersCoos(cid, searchTerm)
             | SearchResults (searchTerm, res) ->
+                handlerActor <! AckQuery(cid, searchTerm, res)
                 printfn "Hey, here are the results of your search for <%s>: %A" searchTerm res
 
             | _ -> printfn "Message not recognized!"

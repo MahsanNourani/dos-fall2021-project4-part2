@@ -69,6 +69,7 @@ type ActorMessage =
     | AckLogin of string * List<string>
     | AckSubscribe of string * string
     | AckCoo of string * string * int * string * bool
+    | AckQuery of string * string * Set<string>
     | ActionDone of string * string
 
 // Simulation Messages:
@@ -165,10 +166,10 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
         // printfn "This is listOfCoos after -- %A" listOfCoos
         if isRecoo then
             findClientActor (cooer)
-            <! Ack($"@{cooer}, successfully re-cooed: #{cooID}#{cooContent}", "PostRecoo")
+            <! Ack($"@{cooer}, successfully re-cooed: /{cooID}/{cooContent}", "PostRecoo")
         else
             findClientActor (cooer)
-            <! Ack($"@{cooer}, successfully posted #{cooID}#{cooContent}", "PostCoo")
+            <! Ack($"@{cooer}, successfully posted /{cooID}/{cooContent}", "PostCoo")
 
         cooID // returns the id of the newly added coo
 
@@ -238,7 +239,7 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                 <! UpdateNewsFeed(cooContent)
 
                 findClientActor (subscriber)
-                <! Ack($"@{cooerUsername}, successfully posted new tweet #{cooID}#{cooContent}", "PostCoo")
+                <! Ack($"@{cooerUsername}, successfully posted new tweet /{cooID}/{cooContent}", "PostCoo")
 
     let rec loop () =
         actor {
@@ -349,6 +350,7 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
 
                 if temp.IsEmpty then
                     printfn "User <%s> is not mentioned in any coo-s." username
+                //TODO: probably would need to send this error to handler [Discuss w/ Mahsan]
                 else
                     // printfn "list of all tweets: %A" listOfCoos
                     // printfn "temp is %A" temp
@@ -376,14 +378,20 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                 else
                     findClientActor (querier)
                     <! Error($"Hashtag {hashtag} does not exist yet!")
+            //TODO: probably would need to send this error to handler [Discuss w/ Mahsan]
 
             | QuerySubscribersCoos (querier, subscriber) ->
                 //Assumption: querier always exists.
+                //querier: shae        Shae follows Mahsan
+                //subscriber: mahsan
                 let subList =
-                    ListOfSubscribersToUser.TryFind(querier).Value
+                    ListOfSubscribersToUser.TryFind(subscriber).Value
+
+                printfn "Debug: querier is %s and subscriber is %s" querier subscriber
+                printfn "Debug: sublist is: %A" subList
 
                 if (usernames.Contains(subscriber)
-                    && subList.Contains(subscriber)) then
+                    && subList.Contains(querier)) then
                     let temp = userCoos.TryFind(subscriber).Value
 
                     let result: Set<string> =
@@ -395,6 +403,7 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                 else
                     findClientActor (querier)
                     <! Error($"{querier} is not subscribed to {subscriber}")
+            //TODO: probably would need to send this error to handler [Discuss w/ Mahsan]
 
             // findClientActor (querier)
             // <! SearchResults(subscriber, Set.empty) // just to unblock the process on the otherside :D

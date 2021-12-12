@@ -131,6 +131,15 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
                     printfn "DEBUG: cooID in handler is %d" cooID
                     findClientActor (username) <! ReCoo cooID //Randomly select a coo from the newsfeed and post it
 
+                //QUERY
+                elif str.Contains("query") then
+                    printfn "this is the request: %s" str
+                    //Retrieving user name and query string
+                    let startIndex = str.IndexOf("/") + 1
+                    let endIndex = str.LastIndexOf("/")
+                    let username = str.[startIndex..endIndex - 1] //the username who is asking for something
+                    let searchTerm = str.[endIndex + 1..]
+                    findClientActor (username) <! Search(searchTerm)
 
                 // the response needs to be converted to a ByteSegment
                 let byteResponse =
@@ -219,6 +228,28 @@ let HandlerAPI (mailbox: Actor<_>) =
 
                 printfn "********-->%s" successMessage
                 sendResponse userws successMessage
+
+            //TODO: If possible, merge all ACKs into one message
+
+            | AckQuery (username, searchTerm, res) ->
+                let userws =
+                    fst (userSocketMap.TryFind(username).Value)
+
+                let successMessage = "Query successful for user: " + username
+                //Newsfeed update
+                if (res.Count > 0) then //TODO: need to be tested later
+                    let queryMessage = res |> String.concat "|"
+
+                    sendResponse
+                        (userws)
+                        (successMessage
+                         + "/"
+                         + " QUERY RESULT: "
+                         + queryMessage) //TODO: Later change the format based on the updated index.html
+                else
+                    printfn "in else part of the query ack"
+                    let errorMessage = "No results found for " + searchTerm
+                    sendResponse userws errorMessage
 
             //TODO: If possible, merge all ACKs into one message
             | ActionDone (actionType, username) ->

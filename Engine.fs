@@ -12,7 +12,8 @@ open Suave.Sockets.Control
 
 let system = ActorSystem.Create("BirdApp")
 
-let handlerActor = select @"akka://BirdApp/user/handlerapi" system
+let handlerActor =
+    select @"akka://BirdApp/user/handlerapi" system
 
 //////////////////////////////////// Variables ////////////////////////////////////
 // Add Variables here
@@ -56,7 +57,7 @@ type ActorMessage =
     | Logout
     | SubscribeTo of string
     | Coo of string
-    | ReCoo
+    | ReCoo of int
     | Search of string
     | SearchResults of string * Set<string>
     | UpdateNewsFeed of string
@@ -67,16 +68,17 @@ type ActorMessage =
     | LoginAPI of string * string
     | AckLogin of string * List<string>
     | AckSubscribe of string * string
+    | AckCoo of string * string * int * string * bool
     | ActionDone of string * string
-    
-    // Simulation Messages:
-    // | StartSimulation
-    // | SimulateSubscribers
-    // | SimulateCooing
-    // | SimulateReCooing
-    // | AckReCoo of int
-    // | ActionDone of string
-    // | FinishTimer of string
+
+// Simulation Messages:
+// | StartSimulation
+// | SimulateSubscribers
+// | SimulateCooing
+// | SimulateReCooing
+// | AckReCoo of int
+// | ActionDone of string
+// | FinishTimer of string
 ////////////////////////////////////End Actor Messages ////////////////////////////////////
 
 
@@ -119,16 +121,20 @@ let findClientActor (username: string) =
 
 //TODO: if got time, change
 let convertByte (text: string) =
-     text |> System.Text.Encoding.ASCII.GetBytes |>ByteSegment
+    text
+    |> System.Text.Encoding.ASCII.GetBytes
+    |> ByteSegment
 
-let sendResponse (webSocket : WebSocket) (message: string) =
+let sendResponse (webSocket: WebSocket) (message: string) =
     let msg = convertByte message
     //printfn "Printing msg %A" msg
 
-    let s = socket {
-            let! res = webSocket.send Text msg true 
-            return res;
-            }
+    let s =
+        socket {
+            let! res = webSocket.send Text msg true
+            return res
+        }
+
     Async.StartAsTask s |> ignore
 ////////////////////////////////////End Functions ////////////////////////////////////
 
@@ -151,17 +157,20 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
     let postACoo (cooer, cooContent, isRecoo) =
         // printfn "entered postACoo!"
         let mutable temp = userCoos.TryFind(cooer).Value
-        temp <- temp.Add(listOfCoos.Count) // saves ID of Coos
+        let cooID = listOfCoos.Count
+        temp <- temp.Add(cooID) // saves ID of Coos
         userCoos <- userCoos.Add(cooer, temp)
         // printfn "This is userCoos %A" userCoos
-        listOfCoos <- listOfCoos.Add(listOfCoos.Count, cooContent) // This is basically adding the new coo with the id of the size of all the coos
+        listOfCoos <- listOfCoos.Add(cooID, cooContent) // This is basically adding the new coo with the id of the size of all the coos
         // printfn "This is listOfCoos after -- %A" listOfCoos
         if isRecoo then
             findClientActor (cooer)
-            <! Ack($"{cooer} successfully re-cooed: {cooContent}!", "PostRecoo")
+            <! Ack($"@{cooer}, successfully re-cooed: #{cooID}#{cooContent}", "PostRecoo")
         else
             findClientActor (cooer)
-            <! Ack($"{cooer} successfully posted {cooContent}!", "PostCoo")
+            <! Ack($"@{cooer}, successfully posted #{cooID}#{cooContent}", "PostCoo")
+
+        cooID // returns the id of the newly added coo
 
     let checkCooForMentions (cooContent: string) =
         let usersMentionedInTheCoo =
@@ -211,7 +220,7 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                 userHashtagCoos <- userHashtagCoos.Add(hashtagContent, temp)
     // printfn "New Hashtag! Here is the updated userHashtagCoos %A" userHashtagCoos
 
-    let sendCooToSubscribers (cooerUsername, cooContent) =
+    let sendCooToSubscribers (cooerUsername, cooID, cooContent) =
         // printfn "Updating coo..."
 
         let listOfSubscribers =
@@ -221,12 +230,15 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                 )
                 .Value
 
-        // printfn "list of subscribers is: <%A>" listOfSubscribers
+        printfn "list of subscribers is: <%A>" listOfSubscribers
 
         if (not (listOfSubscribers.IsEmpty)) then
             for subscriber in listOfSubscribers do
                 findClientActor (subscriber)
                 <! UpdateNewsFeed(cooContent)
+
+                findClientActor (subscriber)
+                <! Ack($"@{cooerUsername}, successfully posted new tweet #{cooID}#{cooContent}", "PostCoo")
 
     let rec loop () =
         actor {
@@ -280,6 +292,7 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                     printfn "Whoops! Username <%s> is not logged in!!" username
                 else
                     listOfOnlineUsers <- listOfOnlineUsers.Remove(username)
+
                     findClientActor (username)
                     <! Ack($"Yay! {username} is now logged out!!", "Logout")
 
@@ -309,14 +322,27 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                         "Either the subscriber <%s> or the subscribee <%s> are not registered users!!"
                         subscriber
                         subscribee
+
+                printfn "subcriber: %s -- subscribee: %s" subscriber subscribee
+                printfn "--in subscribe: %A" ListOfSubscribersToUser
             | PostCoo (cooerUsername, cooContent, isRecoo) -> //Done!
-                postACoo (cooerUsername, cooContent, isRecoo) // Adds the coo to the server
+                // printfn "In the engine to post coo!!"
+
+                let cooID =
+                    postACoo (cooerUsername, cooContent, isRecoo) // Adds the coo to the server
+
                 checkCooForMentions (cooContent) // searches the coo for mentioned users to update the list
                 checkCooForHashtag (cooContent) // searches the coo for hashtags to update the list
-                sendCooToSubscribers (cooerUsername, cooContent) // Broadcast the new coo to all of the cooer's subscribers
+                sendCooToSubscribers (cooerUsername, cooID, cooContent) // Broadcast the new coo to all of the cooer's subscribers
 
                 findClientActor (cooerUsername)
-                <! UpdateNewsFeed(cooContent) // This will show the Coo on the cooers' time line after it is posted to all the other users
+                <! UpdateNewsFeed(cooContent) // This will show the Coo on the cooer's time line after it is posted to all the other users
+
+            // printfn "In the engine before sending ackCoo!"
+
+            // handlerActor
+            // <! AckCoo(cooerUsername, cooerUsername, cooID, cooContent, isRecoo)
+
             | QueryMentionedCoosFor (querier, username) ->
                 let temp =
                     userMentionedCoos.TryFind(username).Value

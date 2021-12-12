@@ -1,8 +1,8 @@
 {
   "runtimeOptions": {
     "additionalProbingPaths": [
-      "/Users/shaghayegh/.dotnet/store/|arch|/|tfm|",
-      "/Users/shaghayegh/.nuget/packages"
+      "/Users/ruby/.dotnet/store/|arch|/|tfm|",
+      "/Users/ruby/.nuget/packages"
     ]
   }
 }

@@ -100,7 +100,7 @@
         document.getElementById("loginDiv").innerHTML = "";
     }
 
-    if (response.indexOf("TWEET") != -1) {
+    if (response.indexOf("COO") != -1) {
       if(response.indexOf("Login successful") != -1) {
         if(document.getElementById("newsFeedDiv").innerHTML != "") {
           document.getElementById("newsFeedDiv").innerHTML = "";
@@ -141,13 +141,13 @@
 
   // Message formats to send to the client socket for processing!! E.g., follow/Mahsan/Shae
   function doSend(message, type)
-  {
+  { // TODO: does this work?? (changes tweet to coo!!)
     writeToScreen("SENT: " + message); 
-    if(type == "tweet") {
-      websocket.send("tweet/" + username + "/" + message);
+    if(type == "coo") {
+      websocket.send("coo/" + username + "/" + message);
     } 
     if(type == "follow") websocket.send("follow/"+ message + "/" + username);
-    if(type == "retweet") websocket.send("recoo/" + username + "/" + message); //SHAE: changed retweet to recoo
+    if(type == "recoo") websocket.send("recoo/" + username + "/" + message); //SHAE: changed retweet to recoo
     if(type == "query") websocket.send("query/" + username + "/" + message);
     if(message == "logout") websocket.send("logout/" + username + "/" + message);
     else websocket.send(message);
@@ -185,7 +185,7 @@
 
   function tweetAction() {
     const tweet = document.getElementById('tweet').value;
-    doSend(tweet, "tweet");
+    doSend(tweet, "coo");
     document.getElementById('tweet').value = "";
   }
  
@@ -227,7 +227,7 @@
 
   function retweetAction() {
     const reTweetId = document.getElementById('retweet').value;
-    doSend(reTweetId, "retweet");
+    doSend(reTweetId, "recoo");
     document.getElementById('retweet').value = "";
   }
 
@@ -305,14 +305,14 @@
     </div>
 
     <div id="tweetDiv" style="visibility: hidden;">
-      <h3>Tweets</h3>
+      <h3>Coos</h3>
       <!--Tweets form begins-->
       <form id="tweetForm" onSubmit="tweetAction()" method="POST">
         <div class="form-group">
           <label for="tweet">Username</label>
           <input type="text" class="form-control" id="tweet" placeholder="you may tweet" style="width: 50%;" required>
         </div>
-        <button type="submit" class="btn btn-primary">Tweet</button>
+        <button type="submit" class="btn btn-primary">Post Coo</button>
       </form>
       <!--Tweets form ends-->
     </div>
@@ -327,10 +327,10 @@
       <!--Re Tweets form begins-->
       <form class="form-inline" onSubmit="retweetAction()" method="POST">
         <div class="form-group">
-          <label for="retweet">Re-Tweet</label>
+          <label for="retweet">Re-Coo</label>
           <input type="text" class="form-control" id="retweet"  placeholder="Enter the Tweet ID" required>
         </div>
-        <button type="submit" class="btn btn-primary">Re-Tweet</button>
+        <button type="submit" class="btn btn-primary">Re-Coo</button>
       </form>
       <!--Re Tweets form ends-->
     </div>

@@ -69,11 +69,11 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
                         printfn "TODO: send response to user that this username is already taken!"
                     else
                         userSocketMap <- userSocketMap.Add(username, (webSocket, true))
-                
+
                 //LOGIN
                 // elif str.Contains("login") then
-                    //TODO: They don't have it for login. Make sure that login is handled in client/server file, AND there is
-                    //   no need to have it here
+                //TODO: They don't have it for login. Make sure that login is handled in client/server file, AND there is
+                //   no need to have it here
 
                 //LOGOUT
                 elif str.Contains("logout") then
@@ -81,39 +81,55 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
                     //Retrieving user name
                     let startIndex = str.IndexOf("/") + 1
                     let endIndex = str.LastIndexOf("/")
-                    let username = str.[startIndex .. endIndex-1]
+                    let username = str.[startIndex..endIndex - 1]
                     printfn $"Debug: retrieved username in logout is: {username}"
                     printfn "list of online users before update: %A" listOfOnlineUsers
-                    
+
                     //TODO: Make sure there is no need to update/empty the newsfeed list
-                    findClientActor(username) <! Logout
+                    findClientActor (username) <! Logout
 
                 //FOLLOW
-                elif str.Contains("follow") then   //TODO: Later, change follow to "subscribe" in order to be consistent everywhere
+                elif str.Contains("follow") then //TODO: Later, change follow to "subscribe" in order to be consistent everywhere
                     // (follow/mahsan/shae)
                     printfn "Follow QUERY: %s" str
                     let subscribeeIndex = str.IndexOf("/") + 1
                     let subscriberIndex = str.LastIndexOf("/")
-                    
-                    let subscribee = str.[subscribeeIndex..subscriberIndex-1] // Username of the person to follow
-                    let subscriber = str.[subscriberIndex+1..] // Username of the person who wishes to follow the other person
+
+                    let subscribee =
+                        str.[subscribeeIndex..subscriberIndex - 1] // Username of the person to follow
+
+                    let subscriber = str.[subscriberIndex + 1..] // Username of the person who wishes to follow the other person
 
                     if (userSocketMap.ContainsKey(subscribee)) then
                         // ToDO: follow the user :P
-                        findClientActor(subscriber) <! SubscribeTo(subscribee)
+                        findClientActor (subscriber)
+                        <! SubscribeTo(subscribee)
                     else
-                        let message = "No matched user with handle @" + subscribee + "found to follow!!"
-                        sendResponse webSocket message
+                        let message =
+                            "No matched user with handle @"
+                            + subscribee
+                            + "found to follow!!"
 
-                //RECOO
-                elif str.Contains("recoo") then  //TODO: Change "retweet" to recoo in index.html
+                        sendResponse webSocket message
+                // Coo
+                elif (str.Contains("coo") && not (str.Contains("recoo"))) then // No edge cases because username exists (browser tab session)
+                    printfn "this is the request: %s" str
+                    let userIndex = str.IndexOf("/") + 1
+                    let cooIndex = str.LastIndexOf("/")
+                    let username = str.[userIndex..cooIndex - 1]
+                    let cooContent = str.[cooIndex + 1..]
+                    findClientActor (username) <! Coo(cooContent)
+
+                //ReCoo
+                elif str.Contains("recoo") then //TODO: Change "retweet" to recoo in index.html
                     printfn "this is the request: %s" str
                     //Retrieving user name and coo ID
                     let startIndex = str.IndexOf("/") + 1
                     let endIndex = str.LastIndexOf("/")
-                    let username = str.[startIndex .. endIndex-1]
-                    //let cooID = str.[endIndex..]  TODO: use cooID if we decided NOT to randomly retweet, and tweet based on the ID
-                    findClientActor(username) <! ReCoo   //Randomly select a coo from the newsfeed and post it
+                    let username = str.[startIndex..endIndex - 1]
+                    let cooID = str.[endIndex + 1..] |> int //TODO: use cooID if we decided NOT to randomly retweet, and tweet based on the ID
+                    printfn "DEBUG: cooID in handler is %d" cooID
+                    findClientActor (username) <! ReCoo cooID //Randomly select a coo from the newsfeed and post it
 
 
                 // the response needs to be converted to a ByteSegment
@@ -137,7 +153,7 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
 
 
 //Moved it to Engine
-//let handlerActor = select @"akka://BirdApp/user/handlerapi" system  
+//let handlerActor = select @"akka://BirdApp/user/handlerapi" system
 
 //////////////////////////////////// Handler API Actor ////////////////////////////////////
 // Add Handler Actor here
@@ -145,66 +161,99 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
 // This is the actor that serves some of the functionalitlies that we had in the Simulator in Project 4.1
 // The HandlerAPI works as a bridge between the sockets and clients (or sometimes, the engine).
 
-let HandlerAPI (mailbox:Actor<_>) =
-    
-    let rec loop() = actor {
-        let! message = mailbox.Receive()
-        // printfn "SPAWNING Handler API ACTOR in the loop"
-        match message with
-        | RegisterAPI (username, pass) ->
-            // Client knows its username through cid, so we only pass the password (aka pass)
-            findClientActor(username) <! Register pass
-        
-        | LoginAPI (username, pass) ->
-            // Client knows its username through cid, so we only pass the password (aka pass)
-            printfn $"******: {username}"
-            printfn $"******: {findClientActor(username)}"
-            findClientActor(username) <! Login pass
+let HandlerAPI (mailbox: Actor<_>) =
 
-        | AckLogin (username, newsfeed) ->
-            let userws = fst(userSocketMap.TryFind(username).Value)
-            let successMessage = "Login successful for user: " + username
-            //Newsfeed update
-            if (newsfeed.Count > 0) then   //TODO: need to be tested later, when the newsfeed is filled with coo's.
-                let newsfeedMsg = newsfeed |> String.concat "|"
-                sendResponse (userws) (successMessage + "/" + newsfeedMsg)    //TODO: Later change the format based on the updated index.html
-            else
-                //printfn "in else part of the log in ack"
+    let rec loop () =
+        actor {
+            let! message = mailbox.Receive()
+            // printfn "SPAWNING Handler API ACTOR in the loop"
+            match message with
+            | RegisterAPI (username, pass) ->
+                // Client knows its username through cid, so we only pass the password (aka pass)
+                findClientActor (username) <! Register pass
+
+            | LoginAPI (username, pass) ->
+                // Client knows its username through cid, so we only pass the password (aka pass)
+                printfn $"******: {username}"
+                printfn $"******: {findClientActor (username)}"
+                findClientActor (username) <! Login pass
+
+            | AckLogin (username, newsfeed) ->
+                let userws =
+                    fst (userSocketMap.TryFind(username).Value)
+
+                let successMessage = "Login successful for user: " + username
+                //Newsfeed update
+                if (newsfeed.Count > 0) then //TODO: need to be tested later, when the newsfeed is filled with coo's.
+                    let newsfeedMsg = newsfeed |> String.concat "|"
+                    sendResponse (userws) (successMessage + "/" + newsfeedMsg) //TODO: Later change the format based on the updated index.html
+                else
+                    //printfn "in else part of the log in ack"
+                    sendResponse userws successMessage
+
+            | AckSubscribe (username, subscribee) ->
+                let userws =
+                    fst (userSocketMap.TryFind(username).Value)
+
+                let successMessage = "You now follow @" + subscribee + "!"
+                sendResponse userws successMessage
+            | AckCoo (username, cooerUsername, cooID, cooContent, isRecoo) ->
+                let userws =
+                    fst (userSocketMap.TryFind(username).Value)
+
+                let mutable successMessage = ""
+
+                if (isRecoo) then
+                    successMessage <- "[RECOO] "
+                else
+                    successMessage <- "[COO] "
+
+                successMessage <-
+                    successMessage
+                    + "["
+                    + cooerUsername
+                    + "] ["
+                    + string (cooID)
+                    + "] --- "
+                    + cooContent
+
+                printfn "********-->%s" successMessage
                 sendResponse userws successMessage
 
-        | AckSubscribe (username, subscribee) -> 
-            let userws = fst(userSocketMap.TryFind(username).Value)
-            let successMessage = "You now follow @" + subscribee + "!"
-            sendResponse userws successMessage
+            //TODO: If possible, merge all ACKs into one message
+            | ActionDone (actionType, username) ->
+                let userws =
+                    fst (userSocketMap.TryFind(username).Value)
 
-        //TODO: If possible, merge all ACKs into one message
-        | ActionDone (actionType, username) ->
-            let userws = fst(userSocketMap.TryFind(username).Value)
-            
-            match actionType with
-            | "Register" -> 
-                //TODO: Question: Do I need to make ws true here? or has it been done somewhereelse? 
-                let successMessage = "Registration successful for user: " + username
-                sendResponse userws successMessage   //reslut -> after successful registeration, the registeration form goes away, and only log in form will stay.
+                match actionType with
+                | "Register" ->
+                    //TODO: Question: Do I need to make ws true here? or has it been done somewhereelse?
+                    let successMessage =
+                        "Registration successful for user: " + username
+
+                    sendResponse userws successMessage //reslut -> after successful registeration, the registeration form goes away, and only log in form will stay.
                 //TODO: so far assumption is that the ack message is always successful.
                 //   Make sure that the unsuccessful message is not necessary.
-                
-            | "Logout" ->
-                printfn "list of online users after update: %A" listOfOnlineUsers
-                let successMessage = "Logout successful for user: " + username
-                printfn "%s" successMessage
-                sendResponse userws successMessage
+
+                | "Logout" ->
+                    printfn "list of online users after update: %A" listOfOnlineUsers
+
+                    let successMessage =
+                        "Logout successful for user: " + username
+
+                    printfn "%s" successMessage
+                    sendResponse userws successMessage
                 //TODO: Change here if anything is needed to be updated in index.html
 
-            | _ -> printfn "Action type <%s> not recognized!" actionType
+                | _ -> printfn "Action type <%s> not recognized!" actionType
 
-        | _ -> printfn "Message not recognized!"
+            | _ -> printfn "Message not recognized!"
 
-        return! loop()
+            return! loop ()
 
         }
-        
-    loop()
+
+    loop ()
 ////////////////////////////////////End Handler API Actor ////////////////////////////////////
 
 let register =
@@ -231,14 +280,17 @@ let register =
             printfn "Success! We can now add this person!"
 
             // creates client actor for the new user that's registered
-            let testClient = spawn system ("client" + username) (ClientActor username userWs) |> ignore 
+            let testClient =
+                spawn system ("client" + username) (ClientActor username userWs)
+                |> ignore
+
             printfn $"--**--> {testClient}"
-            let newClient = findClientActor(username)
+            let newClient = findClientActor (username)
             printfn $"--**--> {newClient}"
             printfn $"{handlerActor}"
             // Thread.Sleep(1000)
             // tells Socket to tell the client to register to the engine
-            handlerActor <! RegisterAPI (username, password)
+            handlerActor <! RegisterAPI(username, password)
 
             printfn "After the fact!"
         else
@@ -261,7 +313,9 @@ let login =
 
         //Checks whether the username exists or not
         if userSocketMap.ContainsKey(username) then
-            handlerActor <? LoginAPI (username, password) |> ignore
+            handlerActor <? LoginAPI(username, password)
+            |> ignore
+
             printfn "Success! You are logged in!"
         else
             printfn "User is not registered!!"

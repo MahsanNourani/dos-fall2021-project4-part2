@@ -132,6 +132,8 @@ let ClientActor (cid: string) (cSocket: WebSocket) (mailbox: Actor<_>) =
             /// if searching for hashtags, user needs to add # in the beginning of the search term
             /// if searching for username, (e.g., a subscriber of theirs) then no additional characters are needed.
             | Search (searchTerm) ->
+                printfn "****DEBUG***** in search - search term: %s" searchTerm
+
                 let mention =
                     findRegexPattern (searchTerm, mentionRegex)
 
@@ -142,12 +144,16 @@ let ClientActor (cid: string) (cSocket: WebSocket) (mailbox: Actor<_>) =
                     engine
                     <! QueryMentionedCoosFor(cid, (mention.[0] |> string).Substring(1))
                 elif (hashtag.Count <> 0) then
+                    printfn "here in hashtag!"
+
                     engine
                     <! QueryHashtagCoosFor(cid, (hashtag.[0] |> string).Substring(1))
                 else
                     engine <! QuerySubscribersCoos(cid, searchTerm)
-            | SearchResults (searchTerm, res) ->
-                handlerActor <! AckQuery(cid, searchTerm, res)
+            | SearchResults (searchTerm, res, searchTermExtras) ->
+                handlerActor
+                <! AckQuery(cid, searchTerm, res, searchTermExtras)
+
                 printfn "Hey, here are the results of your search for <%s>: %A" searchTerm res
 
             | _ -> printfn "Message not recognized!"

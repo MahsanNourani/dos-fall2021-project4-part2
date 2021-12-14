@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Twitter Clone</title>
+  <title>BirdApp</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
   <style>
@@ -15,19 +16,23 @@
       width: 50%;
     }
     .newsfeed-box {
-      border: 2px solid;
-      height: 225px;
+      border: 2px solid #09966961;
+      height: 300px;
       overflow: auto;
+      border-radius: 3px;
+      padding: 15px;
     }
     .log-box {
-      height: 100px;
-      width: 50%;
+      height: 200px;
+      /* width: 50%; */
       overflow: auto;
     }
     .query-box {
-      border: 2px solid;
-      height: 100px;
+      border: 2px solid #09966961;
+      height: 300px;
       overflow: auto;
+      border-radius: 3px;
+      padding: 15px;
     }
     .outer-header {
       width: 100%;
@@ -37,9 +42,58 @@
       display: inline-block;
     }
     #usernameDisplay {
-      margin: 20px;
+      margin: 22px;
       font-weight: bold;
-      font-size: 20px;
+      font-size: 16px;
+      font-style: italic;
+    }
+    /* #registrationDiv {
+      border-bottom: 1px solid grey;
+    } */
+    .birdappIcon {
+      font-size: 35px;
+      color:#099669;
+    }
+    #uname, #pass {
+      margin-bottom: 10px;
+    }
+
+    #tweetForm {
+      padding-top: 20px;
+    }
+
+    #query {
+      width: 100%;
+      margin-top: 5px;
+    }
+    .secondary-text {
+      color: #099669
+    }
+    #searchBtn {
+      margin-top: 15px;
+    }
+    .cooList {
+      overflow-wrap: break-word;
+      border-bottom: 1px solid #09966961;
+      padding-bottom: 10px;
+    }
+
+    .badge {
+      background-color: #089668;
+      font-size: 14px;
+    }
+
+    #reTweetDiv {
+      margin-top: 15px;
+    }
+
+    #logsOuter {
+      border: 2px solid #b0d7c6;
+      padding: 20px;
+      border-radius: 5px;
+    }
+    .error-text {
+      color: rgb(153, 7, 7)
     }
   </style>
 </head>
@@ -91,11 +145,12 @@
 
     if (response.indexOf("Login successful") != -1) {
         //loginDone = true;
-        document.getElementById("logoutBtn").style.visibility = "visible";
-        document.getElementById("tweetDiv").style.visibility = "visible";
-        document.getElementById("followUserDiv").style.visibility = "visible";
-        document.getElementById("queryDiv").style.visibility = "visible";
-        document.getElementById("usernameDisplay").innerHTML = username;
+        document.getElementById("logoutBtn").style.display = "block";
+        document.getElementById("tweetDiv").style.display = "block";
+        document.getElementById("followUserDiv").style.display = "block";
+        document.getElementById("queryDiv").style.display = "block";
+        document.getElementById("newsFeedOuter").style.display = "block";
+        document.getElementById("usernameDisplay").innerHTML = "Welcome back, " + username + "!";
         
         document.getElementById("loginDiv").innerHTML = "";
     }
@@ -105,28 +160,46 @@
         if(document.getElementById("newsFeedDiv").innerHTML != "") {
           document.getElementById("newsFeedDiv").innerHTML = "";
           let tweetsArr = response.substring(response.indexOf("/") + 1).split("|");
-          tweetsArr.forEach(ele => writeToNewsFeed('<span style="font-weight: bold;font-size: 16px;">'+ele+'</span>'));
+          tweetsArr.forEach(ele => writeToNewsFeed(ele));
         }
       } else {
-        writeToNewsFeed('<span style="font-weight: bold;font-size: 16px;">'+evt.data+'</span>');
+        writeToNewsFeed(evt.data);
       }
-      document.getElementById("reTweetDiv").style.visibility = "visible";
+      document.getElementById("reTweetDiv").style.display = "block";
       
     }
 
     if(response.indexOf("QUERY RESULT") != -1) {
       const str = evt.data;
-      document.getElementById("queryOuter").style.visibility = "visible";
-      const resArr = str.substring(str.indexOf("]") + 1).split("|");
-      resArr.forEach(ele => writeToQueryRes('<span style="font-weight: bold;font-size: 16px;">'+ele+'</span>'));
-      
+      let temp = str.indexOf("/")
+      let titleText = str.slice(0, temp)
+
+      temp = str.indexOf("QUERY RESULT:")
+      let allTweets = str.substr(temp + 14)      
+      document.getElementById("searchResults").innerHTML = titleText
+
+      document.getElementById("queryOuter").style.display = "block";
+
+      if (allTweets != "") { 
+        const resArr = allTweets.split("|");
+        
+        resArr.forEach(ele => writeToQueryRes(ele));
+      }
     }
-    document.getElementById("logsOuter").style.visibility = "visible";
-    if (response.indexOf("Login successful") != -1 && document.getElementById("output").innerHTML != "") {
+    document.getElementById("logsOuter").style.display = "block";
+    if (response.indexOf("ERROR:") != -1) { 
+      let error = response.substr(6)
+      console.log(error)
+      // if (response.indexOf("Login successful") != -1 && document.getElementById("output").innerHTML != "")
+      //   document.getElementById("output").innerHTML = "";
+      writeToScreen('<span class="error-text"> <b>Error</b>: ' + error +'</span>');
+    }
+    else if (response.indexOf("Login successful") != -1 && document.getElementById("output").innerHTML != "") {
       document.getElementById("output").innerHTML = "";
-      writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
+      writeToScreen('<span class="secondary-text"> <b>Engine Responded</b>: ' + evt.data+'</span>');
     } else {
-      writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
+      if (evt.data.indexOf("/") != -1)
+        writeToScreen('<span class="secondary-text"> <b>Engine Responded</b>:' + evt.data+'</span>');
     }
     
     
@@ -142,7 +215,7 @@
   // Message formats to send to the client socket for processing!! E.g., follow/Mahsan/Shae
   function doSend(message, type)
   { // TODO: does this work?? (changes tweet to coo!!)
-    writeToScreen("SENT: " + message); 
+    // writeToScreen("SENT: " + message); 
     if(type == "coo") {
       websocket.send("coo/" + username + "/" + message);
     } 
@@ -162,19 +235,62 @@
   }
 
   function writeToNewsFeed(message) {
-    document.getElementById("newsFeedOuter").style.visibility = "visible";
+    console.log(message)
+
+    let result = message.includes("[COO]");
+    let messageInfoLength = 7
+    if (!result) 
+      messageInfoLength = 9
+        
+    let username = "", cooID = "", cooContent = ""
+    username = message.substr(messageInfoLength)
+    let temp = username.indexOf("]")
+    username = username.slice(0, temp)
+
+    cooID = message.substr(messageInfoLength)
+    cooID = cooID.substr(temp+3)
+    temp = cooID.indexOf("]")
+    cooID = cooID.slice(0, temp)
+
+    temp = message.indexOf("---")
+    cooContent = message.substr(temp+3)
+
+    let cooItem = "<span class='badge'>" + cooID + "</span> " + username + " " + (result?"coo-ed": "recoo-ed") + ": " + cooContent
+  
+    document.getElementById("newsFeedOuter").style.display = "block";
     var newsFeedDiv = document.getElementById("newsFeedDiv");
     var tweet = document.createElement("p");
-    tweet.style.wordWrap = "break-word";
-    tweet.innerHTML = message;
+    tweet.classList.add("cooList");
+    // tweet.style.wordWrap = "break-word";
+    tweet.innerHTML = '<span style="font-weight: bold;font-size: 16px; color: #596e65;">' + cooItem + '</span>';
     newsFeedDiv.appendChild(tweet);
   }
 
   function writeToQueryRes(message) {
+    console.log (message)
+      // let result = message.includes("[COO]");
+      // let messageInfoLength = 7
+      // if (!result) 
+      //   messageInfoLength = 9
+          
+      // let username = "", cooID = "", cooContent = ""
+      // username = message.substr(messageInfoLength)
+      // let temp = username.indexOf("]")
+      // username = username.slice(0, temp)
+
+      // cooID = message.substr(messageInfoLength)
+      // cooID = cooID.substr(temp+3)
+      // temp = cooID.indexOf("]")
+      // cooID = cooID.slice(0, temp)
+
+      // temp = message.indexOf("---")
+      // cooContent = message.substr(temp+3)
+
     var queryResDiv = document.getElementById("queryResDiv");
     var queryRes = document.createElement("p");
-    queryRes.style.wordWrap = "break-word";
-    queryRes.innerHTML = message;
+    // queryRes.style.wordWrap = "break-word";
+    queryRes.classList.add("cooList");
+    queryRes.innerHTML = '<span style="font-weight: bold;font-size: 16px; color: #596e65;">' +  message + '</span>';
     queryResDiv.appendChild(queryRes);
   }
 
@@ -194,10 +310,10 @@
     let headerDiv = $('<h3>Login Form</h3>');
     let formDiv = $('<form id="loginForm" action="/login" method="GET"></form>')
     let formGrpDiv = $('<div class="form-group"></div>');
-    formGrpDiv.append('<label for="uname">Username</label>' + '<input type="text" class="form-control authWidth" name="uname" id="uname" placeholder="Enter username" required></input>'
-     + '<label for="pass">password</label>' + '<input type="password" class="form-control authWidth" name="pass" id="pass" placeholder="Enter password" required></input>')
+    formGrpDiv.append('<input type="text" class="form-control authWidth" name="uname" id="uname" placeholder="Enter username" required></input>'
+     + '<input type="password" class="form-control authWidth" name="pass" id="pass" placeholder="Enter password" required></input>')
     formDiv.append(formGrpDiv);
-    formDiv.append($('<button type="submit" class="btn btn-primary">Login</button>'));
+    formDiv.append($('<button type="submit" class="btn btn-success">Login</button>'));
     mainDiv.append(headerDiv);
     mainDiv.append(formDiv);
     return mainDiv;
@@ -205,15 +321,15 @@
 
   function logoutUser() {
     doSend("logout");
-    document.getElementById("logoutBtn").style.visibility = "hidden";
-    document.getElementById("tweetDiv").style.visibility = "hidden";
-    document.getElementById("followUserDiv").style.visibility = "hidden";
-    document.getElementById("queryDiv").style.visibility = "hidden";
+    document.getElementById("logoutBtn").style.display = "none";
+    document.getElementById("tweetDiv").style.display = "none";
+    document.getElementById("followUserDiv").style.display = "none";
+    document.getElementById("queryDiv").style.display = "none";
     document.getElementById("usernameDisplay").innerHTML = "";
-    document.getElementById("logsOuter").style.visibility = "hidden";
-    document.getElementById("queryOuter").style.visibility = "hidden";
-    document.getElementById("reTweetDiv").style.visibility = "hidden";
-    document.getElementById("newsFeedOuter").style.visibility = "hidden";
+    document.getElementById("logsOuter").style.display = "none";
+    document.getElementById("queryOuter").style.display = "none";
+    document.getElementById("reTweetDiv").style.display = "none";
+    document.getElementById("newsFeedOuter").style.display = "none";
     $('#loginDiv').append(getFromDiv())
     document.getElementById("uname").value = username;
 
@@ -238,121 +354,134 @@
     document.getElementById('query').value = "";
   }
   //window.addEventListener("load", init, false);
-
+  $(document).ready(function(){
+    $('[data-toggle="tooltip"]').tooltip();   
+  });
 </script>
 
 <div class="container-fluid">
-  <div class="outer-header">
-    <div class="inner">
-      <h2>Twitter Client</h2>
-    </div>
-    <div class="inner pull-right" style="display:inline-flex">
-      <div id="usernameDisplay"></div>
-      <div style="margin:15px">
-        <button type="submit" id="logoutBtn" class="btn btn-primary" style="visibility: hidden;" onclick="logoutUser()">Logout</button>
+  <div class="row">
+    <div class="col-md-12">
+      <div class="outer-header">
+        <div class="inner">
+          <h2><i class="fas fa-dove birdappIcon"></i> Welcome to BirdApp</h2>  
+        </div>
+        <div class="inner pull-right" style="display:inline-flex">
+          <div id="usernameDisplay"></div>
+          <div style="margin:15px">
+            <button type="submit" id="logoutBtn" class="btn btn-danger" style="display: none;" onclick="logoutUser()">Logout</button>
+          </div>
+        </div>
       </div>
     </div>
-    
-    
   </div>
-  <br/>
-  <div class="col-md-6">
-    <div id="logsOuter" style="visibility: hidden;">
-      <div id="output" class="log-box"></div>
-    </div>
-
-    <div id="registrationDiv">
-      <h3>Registration Form</h3>
+  <div class="row">
+    <div id="registrationDiv" class="col-md-7 col-md-offset-4">
+      <h3>Are you new here? Join BirdApp now!</h3>
       <!--Registration form begins-->
       <form id="regForm" action="/register" onSubmit="regAction()" method="GET">
         <div class="form-group">
-          <label for="uname">Username</label>
-          <input type="text" class="form-control authWidth" name="uname" id="uname" placeholder="Enter username" required>
-          <label for="pass">password</label>
-          <input type="password" class="form-control authWidth" name="pass" id="pass" placeholder="Enter password" required>
+          <input type="text" class="form-control authWidth" name="uname" id="uname" placeholder="Enter username" required> 
+          <input type="password" class="form-control authWidth" name="pass" id="pass" placeholder="Enter password" required> 
         </div>
-        <button type="submit" class="btn btn-primary">Register</button>
+        <button type="submit" class="btn btn-success col-md-6">Sign up</button>
       </form>
     <!--Registration form ends-->
     </div>
-    
-    <div id="loginDiv">
-      <h3>Login Form</h3>
+    <!-- Login DIV - Only visible upon logout -->
+    <div id="loginDiv" class="col-md-7 col-md-offset-4">
+      <h3>Already a member? Login to continue!</h3>
       <!--Login form begins-->
       <form id="loginForm" action="/login" method="GET">
         <div class="form-group">
-          <label for="uname">Username</label>
-          <input type="text" class="form-control authWidth" name="uname" id="uname" placeholder="Enter username" required>
-          <label for="pass">password</label>
+          <input type="text" class="form-control authWidth" name="uname" id="uname" placeholder="Enter username" required> 
           <input type="password" class="form-control authWidth" name="pass" id="pass" placeholder="Enter password" required>
         </div>
-        <button type="submit" class="btn btn-primary">Login</button>
+        <button type="submit" class="btn btn-success col-md-6">Login</button>
       </form>
       <!--Login form ends-->
     </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <!-- maybe col-md-12 -->
+      <div id="tweetDiv" style="display: none;"> 
+        <form id="tweetForm" onSubmit="tweetAction()" method="POST">
+          <div class="form-group">
+            <textarea rows="4" class="form-control" id="tweet" placeholder="What's in your mind? Coo!" style="width: 50%;" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-info">Post Coo</button>
+        </form>
+      </div>
+      <div id="newsFeedOuter" style="display: none;">
+        <h3>News Feed</h3>
+        <div id="newsFeedDiv" class="newsfeed-box"></div>
+      </div>
+      <div id="reTweetDiv" style="display: none;">
+        <!--Re Tweets form begins-->
+        <form class="form-inline" onSubmit="retweetAction()" method="POST">
+          <div class="form-group">
+            <label for="retweet">Re-Coo</label>
+            <input type="text" class="form-control" id="retweet"  placeholder="Enter the Coo ID" required>
+          </div>
+          <button type="submit" class="btn btn-info">Re-Coo</button>
+        </form>
+        <!--Re Tweets form ends-->
+      </div>
+    </div>
     
-    <div id="followUserDiv" style="visibility: hidden;">
-      <h3>Follow User</h3>
-      <!--Follow user form begins-->
-      <form id="followUserForm" onSubmit="followUserAction()" method="POST">
-        <div class="form-group">
-          <label for="followUser">Username</label>
-          <input type="text" class="form-control" id="followUser" placeholder="Whom do you want to follow?" style="width: 50%;" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Follow</button>
-      </form>
-      <!--Follow user form ends-->
-    </div>
-
-    <div id="tweetDiv" style="visibility: hidden;">
-      <h3>Coos</h3>
-      <!--Tweets form begins-->
-      <form id="tweetForm" onSubmit="tweetAction()" method="POST">
-        <div class="form-group">
-          <label for="tweet">Username</label>
-          <input type="text" class="form-control" id="tweet" placeholder="you may tweet" style="width: 50%;" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Post Coo</button>
-      </form>
-      <!--Tweets form ends-->
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div id="newsFeedOuter" style="visibility: hidden;">
-      <h3>News Feed</h3>
-      <div id="newsFeedDiv" class="newsfeed-box"></div>
-    </div>
-    <br/>
-    <div id="reTweetDiv" style="visibility: hidden;">
-      <!--Re Tweets form begins-->
-      <form class="form-inline" onSubmit="retweetAction()" method="POST">
-        <div class="form-group">
-          <label for="retweet">Re-Coo</label>
-          <input type="text" class="form-control" id="retweet"  placeholder="Enter the Tweet ID" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Re-Coo</button>
-      </form>
-      <!--Re Tweets form ends-->
-    </div>
-    <br/>
-    <div id="queryDiv" style="visibility: hidden;">
-      <!--Query form begins-->
-      <form class="form-inline" onSubmit="queryAction()" method="POST">
-        <div class="form-group">
-          <label for="query">Query</label>
-          <input type="text" class="form-control" id="query" placeholder="hastag or mention" required>
-        </div>
-        <button type="submit" class="btn btn-primary">Query</button>
-      </form>
-      <!--Query form ends-->
-    </div>
-    <div id="queryOuter" style="visibility: hidden;">
-      <h3>Query Results</h3>
-      <div id="queryResDiv" class="query-box"></div>
+    <div class="col-md-6">
+      <div id="followUserDiv" style="display: none;">
+        <h3>Want to hear from others on BirdApp? Subscribe!</h3>
+        <!--Follow user form begins-->
+        <form id="followUserForm" onSubmit="followUserAction()" method="POST">
+          <div class="form-group">
+            <!-- <label for="followUser">Username</label> -->
+            <input type="text" class="form-control" id="followUser" placeholder="Enter the username you want to subscribe to" style="width: 94%;" required>
+          </div>
+          <button type="submit" class="btn btn-success">Subscribe</button>
+        </form>
+        <!--Follow user form ends-->
+      </div>
+      <div id="queryDiv" style="display: none;">
+        <!--Query form begins-->
+        <form class="form-inline" onSubmit="queryAction()" method="POST">
+          <div class="form-group">
+            <!-- <label for="query">Search for users, #hashtags, or @mentions.</label> -->
+            <h3>Search for coos based on users, #hashtags, or @mentions.</h4>
+            <h4 class="secondary-text">Use # and @ accordingly for the appropriate search. <i class="fas fa-question-circle" data-toggle="tooltip" data-placement="right" title="Searching allows you to see a list of Coos based on your search term. Note that you can only search for people you have already subscribed to. Also, you cannot search yourself."></i></a>
+            </h4>
+            <input type="text" class="form-control col-md-12" id="query" placeholder="Enter search term to continue." required>
+            <button type="submit" class="btn btn-success" id="searchBtn">Search</button>
+          </div>
+          
+        </form>
+        <!--Query form ends-->
+      </div>
+      <div id="queryOuter" style="display: none;">
+        <h3>Search Results</h3>
+        <h4 class="secondary-text" id="searchResults"></h4>
+        <div id="queryResDiv" class="query-box"></div>
+      </div>
     </div>
   </div>
+  <div class="row" style="margin-top: 30px;">
+    <div id="logsOuter" style="display: none;" class="col-md-8 col-md-offset-2">
+      <h4 class="secondary-text">Debugging Logs for the socket messages:</h4>
+      <div id="output" class="log-box"></div>
+    </div>
+  </div>
+  
 </div>
+<!-- <div class="col-md-12">
+    Register DIV - Only visible once in the browser -->
 
+    
+  <!-- </div> --> 
+  <!-- <div class="col-md-6">
+    <br/>
+    
+  </div> -->
 
 </body>
 </html>

@@ -59,7 +59,7 @@ type ActorMessage =
     | Coo of string
     | ReCoo of int
     | Search of string
-    | SearchResults of string * Set<string>
+    | SearchResults of string * Set<string> * string
     | UpdateNewsFeed of string
     | Ack of string * string
     | Error of string
@@ -69,17 +69,9 @@ type ActorMessage =
     | AckLogin of string * List<string>
     | AckSubscribe of string * string
     | AckCoo of string * string * int * string * bool
-    | AckQuery of string * string * Set<string>
+    | AckQuery of string * string * Set<string> * string
     | ActionDone of string * string
-
-// Simulation Messages:
-// | StartSimulation
-// | SimulateSubscribers
-// | SimulateCooing
-// | SimulateReCooing
-// | AckReCoo of int
-// | ActionDone of string
-// | FinishTimer of string
+    | ActionFailed of string * string
 ////////////////////////////////////End Actor Messages ////////////////////////////////////
 
 
@@ -249,6 +241,11 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
             match message with
             | RegisterNewUser (username, password) ->
                 if (usernames.Contains(username)) then
+                    let failMessage = "Oops!! Username already exists!!"
+
+                    handlerActor
+                    <! ActionFailed(username, failMessage)
+
                     printfn "Oops!! Username <%s> already exists!!" username
                 else
                     usernames <- usernames.Add(username)
@@ -267,8 +264,14 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
 
             | LoginUser (username, password) ->
                 if (not (usernames.Contains(username))) then
+                    let failMessage = $"Sorry! Username {username} does not exist. please try registering first!"
+                    handlerActor
+                    <! ActionFailed(username, failMessage)
                     printfn "Sorry! Username <%s> does not exist. please try registering first!" username
                 elif (listOfOnlineUsers.Contains(username)) then
+                    let failMessage = $"Whoops! Username {username} is already logged in!!"
+                    handlerActor
+                    <! ActionFailed(username, failMessage)
                     printfn "Whoops! Username <%s> is already logged in!!" username
                 else
                     let onFilePassword = loginInfo.TryFind(username).Value
@@ -281,6 +284,9 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                         findClientActor (username)
                         <! Ack($"Yay! {username} is now logged in!!", "Login")
                     else // Line added for Project 4.2
+                        let failMessage = "Whoops!! Username and password don't match any registered users. Make sure you entered your information correctly, or try registering for a new account."
+                        handlerActor
+                            <! ActionFailed(username, failMessage)                        
                         printfn
                             "Whoops!! Username and password don't match any registered users. Make sure you entered your information correctly, or try registering for a new account."
 
@@ -288,8 +294,12 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
             | LogoutUser username ->
 
                 if (not (usernames.Contains(username))) then
+                    handlerActor
+                            <! ActionFailed(username, $"Sorry! Username {username} does not exist. please try registering first!")
                     printfn "Sorry! Username <%s> does not exist. please try registering first!" username
                 elif (not (listOfOnlineUsers.Contains(username))) then
+                    handlerActor
+                            <! ActionFailed(username, $"Whoops! Username {username} is not logged in!!")
                     printfn "Whoops! Username <%s> is not logged in!!" username
                 else
                     listOfOnlineUsers <- listOfOnlineUsers.Remove(username)
@@ -316,19 +326,20 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                         findClientActor (subscribee)
                         <! Ack($"{subscriber} now follow {subscribee}.", "")
                     else
+                        handlerActor
+                            <! ActionFailed(subscriber, $"Oops! User {subscriber} is already subscribed to user {subscribee}!!")
                         printfn "Oops! Username <%s> is already subscribed to user <%s>!!" subscriber subscribee
                 else
-                    // Done! TODO: send to simulator that these people don't exist
+                    handlerActor
+                            <! ActionFailed(subscriber, $"Either the subscriber {subscriber} or the subscribee {subscribee} are not registered users!!")
                     printfn
                         "Either the subscriber <%s> or the subscribee <%s> are not registered users!!"
                         subscriber
                         subscribee
 
-                printfn "subcriber: %s -- subscribee: %s" subscriber subscribee
-                printfn "--in subscribe: %A" ListOfSubscribersToUser
-            | PostCoo (cooerUsername, cooContent, isRecoo) -> //Done!
-                // printfn "In the engine to post coo!!"
-
+                // printfn "subcriber: %s -- subscribee: %s" subscriber subscribee
+                // printfn "--in subscribe: %A" ListOfSubscribersToUser
+            | PostCoo (cooerUsername, cooContent, isRecoo) -> 
                 let cooID =
                     postACoo (cooerUsername, cooContent, isRecoo) // Adds the coo to the server
 
@@ -339,30 +350,43 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                 findClientActor (cooerUsername)
                 <! UpdateNewsFeed(cooContent) // This will show the Coo on the cooer's time line after it is posted to all the other users
 
-            // printfn "In the engine before sending ackCoo!"
-
             // handlerActor
             // <! AckCoo(cooerUsername, cooerUsername, cooID, cooContent, isRecoo)
 
             | QueryMentionedCoosFor (querier, username) ->
-                let temp =
-                    userMentionedCoos.TryFind(username).Value
+                let user = userMentionedCoos.TryFind(username)
 
-                if temp.IsEmpty then
-                    printfn "User <%s> is not mentioned in any coo-s." username
-                //TODO: probably would need to send this error to handler [Discuss w/ Mahsan]
+                if (not (user = None)) then
+                    let temp = user.Value
+
+                    if temp.IsEmpty then
+                        let res = Set.empty
+
+                        findClientActor (querier)
+                        <! SearchResults(username, res, "@")
+
+                        printfn "User <%s> is not mentioned in any coo-s." username
+                    //TODO: probably would need to send this error to handler [Discuss w/ Mahsan]
+                    else
+                        // printfn "list of all tweets: %A" listOfCoos
+                        // printfn "temp is %A" temp
+                        let result: Set<string> =
+                            temp
+                            |> Set.map (fun i -> listOfCoos.TryFind(i).Value)
+
+                        findClientActor (querier)
+                        <! SearchResults(username, result, "@")
+
+                        printfn "User <%s> has been mentioned in the following coo-s:\n %A" username result
                 else
-                    // printfn "list of all tweets: %A" listOfCoos
-                    // printfn "temp is %A" temp
-                    let result: Set<string> =
-                        temp
-                        |> Set.map (fun i -> listOfCoos.TryFind(i).Value)
+                    findClientActor (querier)
+                    <! SearchResults(username, Set.empty, "@")
 
                     findClientActor (querier)
-                    <! SearchResults(username, result)
+                    <! Error($"User {username} does not exist yet!")
 
-                    printfn "User <%s> has been mentioned in the following coo-s:\n %A" username result
-            //Done! TODO: we need to send the result to the client actor
+                    handlerActor
+                            <! ActionFailed(querier, $"User {username} does not exist yet!")
 
             | QueryHashtagCoosFor (querier, hashtag) ->
                 if userHashtagCoos.ContainsKey(hashtag) then
@@ -374,36 +398,53 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                         |> Set.map (fun i -> listOfCoos.TryFind(i).Value)
 
                     findClientActor (querier)
-                    <! SearchResults(hashtag, result)
+                    <! SearchResults(hashtag, result, "#")
                 else
+                    let res = Set.empty
+
+                    findClientActor (querier)
+                    <! SearchResults(hashtag, res, "#")
+
                     findClientActor (querier)
                     <! Error($"Hashtag {hashtag} does not exist yet!")
-            //TODO: probably would need to send this error to handler [Discuss w/ Mahsan]
+
+                    handlerActor
+                            <! ActionFailed(querier, $"Hashtag {hashtag} does not exist yet!")
 
             | QuerySubscribersCoos (querier, subscriber) ->
                 //Assumption: querier always exists.
                 //querier: shae        Shae follows Mahsan
                 //subscriber: mahsan
-                let subList =
-                    ListOfSubscribersToUser.TryFind(subscriber).Value
+                let subListKey =
+                    ListOfSubscribersToUser.TryFind(subscriber)
+                if (not(subListKey = None)) then
+                    let subList = subListKey.Value
 
-                printfn "Debug: querier is %s and subscriber is %s" querier subscriber
-                printfn "Debug: sublist is: %A" subList
+                    if (usernames.Contains(subscriber)
+                        && subList.Contains(querier)) then
+                        let temp = userCoos.TryFind(subscriber).Value
 
-                if (usernames.Contains(subscriber)
-                    && subList.Contains(querier)) then
-                    let temp = userCoos.TryFind(subscriber).Value
+                        let result: Set<string> =
+                            temp
+                            |> Set.map (fun i -> listOfCoos.TryFind(i).Value)
 
-                    let result: Set<string> =
-                        temp
-                        |> Set.map (fun i -> listOfCoos.TryFind(i).Value)
+                        findClientActor (querier)
+                        <! SearchResults(subscriber, result, "")
+                    else
+                        let res = Set.empty
 
-                    findClientActor (querier)
-                    <! SearchResults(subscriber, result)
+                        findClientActor (querier)
+                        <! SearchResults(subscriber, res, "")
+
+                        findClientActor (querier)
+                        <! Error($"{querier} is not subscribed to {subscriber}")
+
+                        handlerActor
+                                <! ActionFailed(querier, $"{querier} is not subscribed to {subscriber}")
                 else
-                    findClientActor (querier)
-                    <! Error($"{querier} is not subscribed to {subscriber}")
-            //TODO: probably would need to send this error to handler [Discuss w/ Mahsan]
+                    handlerActor
+                            <! ActionFailed(querier, $"To search coos from user {subscriber}, please subscribe to them first!")
+            //DONE! TODO: probably would need to send this error to handler [Discuss w/ Mahsan]
 
             // findClientActor (querier)
             // <! SearchResults(subscriber, Set.empty) // just to unblock the process on the otherside :D
@@ -417,9 +458,12 @@ let EngineActor liveUsersPerc (mailbox: Actor<_>) =
                 if temp.IsEmpty then
                     findClientActor (username)
                     <! Error($"{username} is not subscribed to anyone yet!")
+
+                    handlerActor
+                            <! ActionFailed(username, $"{username} is not subscribed to anyone yet!")
                 else
                     findClientActor (username)
-                    <! SearchResults("All Subscribers", temp) // sends this even if the set is empty
+                    <! SearchResults("All Subscribers", temp, "") // sends this even if the set is empty
 
             | SimulateOnlineUsers ->
                 //create a random subset of online users

@@ -5,23 +5,19 @@ Mahsan Nourani - Shaghayegh "Shae" Esmaeili
 
 ## Final Project - Part 2 (Project 4)
 
-**TODO: Need to update for project 2**
-
-In this project, we implemented a clone of Twitter, including (1) an engine actor, (2) a client actor which can communicate with the engine, and (3) a simulator actor to test functionalities of our system and run controlled experiments. In this report, we have thoroughly described each actor and their functionality, followed by details of our controlled experiments, performance numbers, and interesting observations.
-The project is implemented using F# and Akka.NET API for actor modeling.
+In this project, we implemented a WebSocket interface for our clone of Twitter App in part 1 using Suave web framework. Our project includes (1) an engine actor, (2) a client actor which can communicate with the engine, (3) a handler actor connecting the websocket interface to clients and engine, and (4) an interface.
+The project is implemented using Suave for websocket interface, F#, Akka.NET API for actor modeling, HTML, CSS, and JavaScript to design our web interface.
 
 ### How to Execute the Program
 
-To run the project, you simply would run the command below in your console, where:
-
-- `numUsers` is the total number of registered users
+To run the project, you simply would run the command below in your console to run the webserver:
 
 ```
 dotnet run numUsers
-// e.g., dotnet run 100, to run the simulation for 100 registered users.
+
 ```
 
-Note that we store numUsers in an integer, which can store up to 2^32, and hence, the maximum number of users this program supports is 2^32.
+Then, you would need to open a browser and type: 127.0.0.1:8080 OR localhost:8080, and the Bird App would run on your local webpage.
 
 ### Terminology
 
@@ -29,7 +25,8 @@ We call this new system Bird App. Coo is the low, sweet sound that a pigeon or d
 
 ### What is working?
 
-We implemented all the required pieces in the project description. Our program works concurrently based on actor models in Akka.NET. We support three actors that are designed to achieve different tasks. Here, we briefly describe each actor and include some design choices. Please refer to the project report for the full list of functionalities for the actors.
+We implemented all the required pieces in the project description. All functionalities form part
+Our program works concurrently based on actor models in Akka.NET. We support three actors that are designed to achieve different tasks. Here, we briefly describe each actor and include some design choices. Please refer to the project report for the full list of functionalities for the actors.
 
 ### Engine Actor
 

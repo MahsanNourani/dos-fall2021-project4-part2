@@ -65,11 +65,13 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
                     let usernameIdx = str.IndexOf("/") + 1
                     let username = str.[usernameIdx..]
                     // TODO: Why is there a problem here??
-                    if (userSocketMap.ContainsKey(username)) then // if username is already taken, send the user response that this is inavlid!
-                        printfn "TODO: send response to user that this username is already taken!"
-                    else
+                    if (not (userSocketMap.ContainsKey(username))) then // if username is already taken, send the user response that this is inavlid!
+                        //     printfn "TODO: send response to user that this username is already taken!"
+                        // else
                         userSocketMap <- userSocketMap.Add(username, (webSocket, true))
-
+                    else
+                        // handlerActor <? ActionFailed(username, "user is already registered!!") |> ignore
+                        sendResponse webSocket $"ERROR: Username {username} is already taken! Please try another username."
                 //LOGIN
                 // elif str.Contains("login") then
                 //TODO: They don't have it for login. Make sure that login is handled in client/server file, AND there is
@@ -77,7 +79,7 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
 
                 //LOGOUT
                 elif str.Contains("logout") then
-                    printfn "this is the request: %s" str
+                    printfn "in logout -- this is the request: %s" str
                     //Retrieving user name
                     let startIndex = str.IndexOf("/") + 1
                     let endIndex = str.LastIndexOf("/")
@@ -113,7 +115,7 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
                         sendResponse webSocket message
                 // Coo
                 elif (str.Contains("coo") && not (str.Contains("recoo"))) then // No edge cases because username exists (browser tab session)
-                    printfn "this is the request: %s" str
+                    printfn "in coo -- this is the request: %s" str
                     let userIndex = str.IndexOf("/") + 1
                     let cooIndex = str.LastIndexOf("/")
                     let username = str.[userIndex..cooIndex - 1]
@@ -122,23 +124,24 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
 
                 //ReCoo
                 elif str.Contains("recoo") then //TODO: Change "retweet" to recoo in index.html
-                    printfn "this is the request: %s" str
+                    printfn "in recoo -- this is the request: %s" str
                     //Retrieving user name and coo ID
                     let startIndex = str.IndexOf("/") + 1
                     let endIndex = str.LastIndexOf("/")
                     let username = str.[startIndex..endIndex - 1]
                     let cooID = str.[endIndex + 1..] |> int //TODO: use cooID if we decided NOT to randomly retweet, and tweet based on the ID
-                    printfn "DEBUG: cooID in handler is %d" cooID
+                    // printfn "DEBUG: cooID in handler is %d" cooID
                     findClientActor (username) <! ReCoo cooID //Randomly select a coo from the newsfeed and post it
 
                 //QUERY
                 elif str.Contains("query") then
-                    printfn "this is the request: %s" str
+                    printfn "in query -- this is the request: %s" str
                     //Retrieving user name and query string
                     let startIndex = str.IndexOf("/") + 1
                     let endIndex = str.LastIndexOf("/")
                     let username = str.[startIndex..endIndex - 1] //the username who is asking for something
                     let searchTerm = str.[endIndex + 1..]
+                    // printfn "*******DEBUG******** searchTerm: %s - username: %s" searchTerm username
                     findClientActor (username) <! Search(searchTerm)
 
                 // the response needs to be converted to a ByteSegment
@@ -159,7 +162,6 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
 
             | _ -> ()
     }
-
 
 //Moved it to Engine
 //let handlerActor = select @"akka://BirdApp/user/handlerapi" system
@@ -231,11 +233,16 @@ let HandlerAPI (mailbox: Actor<_>) =
 
             //TODO: If possible, merge all ACKs into one message
 
-            | AckQuery (username, searchTerm, res) ->
+            | AckQuery (username, searchTerm, res, searchTermExtras) ->
                 let userws =
                     fst (userSocketMap.TryFind(username).Value)
+                // QUery term
+                let mutable successMessage = ""
 
-                let successMessage = "Query successful for user: " + username
+                if (searchTermExtras = "#" || searchTermExtras = "@") then
+                    successMessage <- $"Here is the list of coos that include {searchTermExtras}{searchTerm}:"
+                else
+                    successMessage <- $"Here is the list of coos by user {searchTerm}:"
                 //Newsfeed update
                 if (res.Count > 0) then //TODO: need to be tested later
                     let queryMessage = res |> String.concat "|"
@@ -247,9 +254,13 @@ let HandlerAPI (mailbox: Actor<_>) =
                          + " QUERY RESULT: "
                          + queryMessage) //TODO: Later change the format based on the updated index.html
                 else
-                    printfn "in else part of the query ack"
-                    let errorMessage = "No results found for " + searchTerm
-                    sendResponse userws errorMessage
+                    // printfn "in else part of the query ack"
+                    let errorMessage =
+                        "No results found for "
+                        + searchTermExtras
+                        + searchTerm
+
+                    sendResponse (userws) (errorMessage + "/" + " QUERY RESULT:")
 
             //TODO: If possible, merge all ACKs into one message
             | ActionDone (actionType, username) ->
@@ -263,6 +274,7 @@ let HandlerAPI (mailbox: Actor<_>) =
                         "Registration successful for user: " + username
 
                     sendResponse userws successMessage //reslut -> after successful registeration, the registeration form goes away, and only log in form will stay.
+
                 //TODO: so far assumption is that the ack message is always successful.
                 //   Make sure that the unsuccessful message is not necessary.
 
@@ -277,6 +289,23 @@ let HandlerAPI (mailbox: Actor<_>) =
                 //TODO: Change here if anything is needed to be updated in index.html
 
                 | _ -> printfn "Action type <%s> not recognized!" actionType
+
+            | ActionFailed (username, failMessage) ->
+                //TODO: userws is not necessarily the "user"ws everywhere. Needs to be modified!
+                let userws =
+                    fst (userSocketMap.TryFind(username).Value)
+
+                let failureMessage = "ERROR: " + failMessage
+                printfn "failure message: %s" failureMessage
+                sendResponse userws failureMessage
+
+            // match actionType with
+            // | "RegisterFail" ->
+            //     let failureMessage = "ERROR: " + failMessage
+            //     printfn "failure message: %s" failureMessage
+            //     sendResponse userws failureMessage
+
+            // | "LoginFail" ->
 
             | _ -> printfn "Message not recognized!"
 
@@ -325,6 +354,9 @@ let register =
 
             printfn "After the fact!"
         else
+            // handlerActor
+            // <? ActionFailed(username, "user is already registered!!") |> ignore
+
             printfn "user is already registered!!"
 
 
@@ -349,7 +381,8 @@ let login =
 
             printfn "Success! You are logged in!"
         else
-            printfn "User is not registered!!"
+            handlerActor <? ActionFailed(username, "User is not registered!!") |> ignore
+            printfn "User is not registered!!" 
 
         NO_CONTENT) // So that we don't need the OK (DO_SOMETHING_HERE). With OK(..), the content would cover the whole screen instead of inside the page.
 
@@ -366,8 +399,6 @@ let app =
 
 [<EntryPoint>]
 let main argv =
-    // startWebServer defaultConfig app
     spawn system "handlerapi" HandlerAPI |> ignore // creates a single instance of the handler API to handle all the messages that are transferred between client and sockets.
-    // startWebServer { defaultConfig with logger = Targets.create Verbose [||] } app
     startWebServer defaultConfig app
     0

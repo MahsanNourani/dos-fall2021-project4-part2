@@ -55,7 +55,7 @@ let ClientActor (cid: string) (cSocket: WebSocket) (mailbox: Actor<_>) =
                 elif (cooID >= newsFeed.Count) then
                     printfn "Your selected Coo does not exist!"
                 else
-                    printfn "*********DEBUG********* List of coos: %A" listOfCoos
+                    // printfn "*********DEBUG********* List of coos: %A" listOfCoos
                     let cooContent = listOfCoos.TryFind(cooID).Value
 
                     // let rndVal = Random()
@@ -132,7 +132,7 @@ let ClientActor (cid: string) (cSocket: WebSocket) (mailbox: Actor<_>) =
             /// if searching for hashtags, user needs to add # in the beginning of the search term
             /// if searching for username, (e.g., a subscriber of theirs) then no additional characters are needed.
             | Search (searchTerm) ->
-                printfn "****DEBUG***** in search - search term: %s" searchTerm
+                // printfn "****DEBUG***** in search - search term: %s" searchTerm
 
                 let mention =
                     findRegexPattern (searchTerm, mentionRegex)

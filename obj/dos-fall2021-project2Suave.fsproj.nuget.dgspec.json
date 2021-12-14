@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/Users/ruby/Documents/DOS Projects/dos-fall2021-project2Suave/dos-fall2021-project2Suave.fsproj": {}
+    "/Users/shaghayegh/Documents/DoS/Projects/Project 4.2/dos-fall2021-project4-part2/dos-fall2021-project2Suave.fsproj": {}
   },
   "projects": {
-    "/Users/ruby/Documents/DOS Projects/dos-fall2021-project2Suave/dos-fall2021-project2Suave.fsproj": {
+    "/Users/shaghayegh/Documents/DoS/Projects/Project 4.2/dos-fall2021-project4-part2/dos-fall2021-project2Suave.fsproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/ruby/Documents/DOS Projects/dos-fall2021-project2Suave/dos-fall2021-project2Suave.fsproj",
+        "projectUniqueName": "/Users/shaghayegh/Documents/DoS/Projects/Project 4.2/dos-fall2021-project4-part2/dos-fall2021-project2Suave.fsproj",
         "projectName": "dos-fall2021-project2Suave",
-        "projectPath": "/Users/ruby/Documents/DOS Projects/dos-fall2021-project2Suave/dos-fall2021-project2Suave.fsproj",
-        "packagesPath": "/Users/ruby/.nuget/packages/",
-        "outputPath": "/Users/ruby/Documents/DOS Projects/dos-fall2021-project2Suave/obj/",
+        "projectPath": "/Users/shaghayegh/Documents/DoS/Projects/Project 4.2/dos-fall2021-project4-part2/dos-fall2021-project2Suave.fsproj",
+        "packagesPath": "/Users/shaghayegh/.nuget/packages/",
+        "outputPath": "/Users/shaghayegh/Documents/DoS/Projects/Project 4.2/dos-fall2021-project4-part2/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/ruby/.nuget/NuGet/NuGet.Config"
+          "/Users/shaghayegh/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net5.0"

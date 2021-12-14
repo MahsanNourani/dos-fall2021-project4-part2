@@ -84,8 +84,8 @@ let ws (webSocket: WebSocket) (context: HttpContext) =
                     let startIndex = str.IndexOf("/") + 1
                     let endIndex = str.LastIndexOf("/")
                     let username = str.[startIndex..endIndex - 1]
-                    printfn $"Debug: retrieved username in logout is: {username}"
-                    printfn "list of online users before update: %A" listOfOnlineUsers
+                    // printfn $"Debug: retrieved username in logout is: {username}"
+                    // printfn "list of online users before update: %A" listOfOnlineUsers
 
                     //TODO: Make sure there is no need to update/empty the newsfeed list
                     findClientActor (username) <! Logout
